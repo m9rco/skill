@@ -1,4 +1,13 @@
-# 一些语法笔记
+# 语法基础笔记  
+- [Abstract](#abstract)  
+- [Preface](#preface)  
+- [Design idea and innovation point](#design-idea-and-innovation-point)  
+  - [Background](#background) 
+  - [Design inspirations](#design-inspirations) 
+  - [Innovation point](#innovation-point)  
+  - [Developmental vision](#developmental-vision) 
+
+
 
 ### 基础结构
 
