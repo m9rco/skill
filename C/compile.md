@@ -12,7 +12,7 @@ C代码编译成可执行程序经过4步：
 
 
 <div align="center">
-  <img style="width:100%;" src="./assets/complie_process.jpeg">
+  <img style="width:100%;" src="./assets/complie_process.svg">
 </div>
 
 
