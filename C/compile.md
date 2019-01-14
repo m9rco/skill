@@ -11,6 +11,8 @@ C代码编译成可执行程序经过4步：
 4. 链接：C语言写的程序是需要依赖各种库的，所以编译之后还需要把库链接到最终的可执行程序中去
 
 
-![img](./assets/complie_process.jpeg)
+<div align="center">
+  <img style="width:100%;" src="./assets/complie_process.jpeg">
+</div>
 
 
