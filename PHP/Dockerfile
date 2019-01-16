@@ -17,6 +17,9 @@ RUN set -ex \
        gcc \
        musl-dev \
        openssl \
+       openssl-dev \
+       curl \
+       curl-dev \
        vim \
        libc-dev \
        bash-doc \
@@ -26,6 +29,11 @@ RUN set -ex \
        libtool \
        bison \
        git \
+       make \
+       libxml2 \
+       libxml2-dev \
+       libxml2-utils \
+       php7-openssl \
        re2c
 
 # ------------------------- 源码编译
@@ -34,6 +42,7 @@ RUN set -ex \
      && cd php-src \
      && ./buildconf --force \
      && ./configure \
+        --enable-mysqlnd \
         --prefix=$HOME/php \
         --exec-prefix=$HOME/local \
         --bindir=$HOME/bin \
@@ -41,14 +50,13 @@ RUN set -ex \
         --includedir=$HOME/include \
         --libdir=$HOME/lib \
         --mandir=$HOME/man \
+        --with-mysqli=mysqlnd \
+        --with-pdo-mysql=mysqlnd \
         --with-config-file-path=$HOME/etc \
-        --with-mcrypt=$HOME/usr/include \
         --with-mhash \
         --with-openssl \
-        --with-gd \
-        --with-iconv \
-        --with-zlib \
-        --enable-zip \
+        --with-openssl-dir=/usr/include/openssl \
+        --with-curl \
      && make \
      && make install
 
