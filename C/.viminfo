@@ -12,7 +12,7 @@
 ~h
 # Command Line History (newest to oldest):
 :q
-|2,0,1547612254,,"q"
+|2,0,1547624321,,"q"
 :$
 |2,0,1547612253,,"$"
 
@@ -27,22 +27,38 @@
 # Registers:
 
 # File marks:
-'0  33  2  ~/assembly/hello.s
-|4,48,33,2,1547612254,"~/assembly/hello.s"
-'1  1  0  ~/assembly/hello.
-|4,49,1,0,1547612248,"~/assembly/hello."
+'0  1  0  ~/basis/main.c
+|4,48,1,0,1547624321,"~/basis/main.c"
+'1  33  2  ~/assembly/hello.s
+|4,49,33,2,1547612254,"~/assembly/hello.s"
+'2  1  0  ~/assembly/hello.
+|4,50,1,0,1547612248,"~/assembly/hello."
 
 # Jumplist (newest first):
+-'  1  0  ~/basis/main.c
+|4,39,1,0,1547624321,"~/basis/main.c"
 -'  33  2  ~/assembly/hello.s
 |4,39,33,2,1547612254,"~/assembly/hello.s"
+-'  33  2  ~/assembly/hello.s
+|4,39,33,2,1547612254,"~/assembly/hello.s"
+-'  1  0  ~/assembly/hello.s
+|4,39,1,0,1547612250,"~/assembly/hello.s"
 -'  1  0  ~/assembly/hello.s
 |4,39,1,0,1547612250,"~/assembly/hello.s"
 -'  1  0  ~/assembly/hello.
 |4,39,1,0,1547612248,"~/assembly/hello."
 -'  1  0  ~/assembly/hello.
 |4,39,1,0,1547612248,"~/assembly/hello."
+-'  1  0  ~/assembly/hello.
+|4,39,1,0,1547612248,"~/assembly/hello."
+-'  1  0  ~/assembly/hello.
+|4,39,1,0,1547612248,"~/assembly/hello."
 
 # History of marks within files (newest to oldest):
+
+> ~/basis/main.c
+	*	1547624318	0
+	"	1	0
 
 > ~/assembly/hello.s
 	*	1547612253	0
