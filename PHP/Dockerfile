@@ -55,8 +55,15 @@ RUN set -ex \
         --with-openssl \
         --with-openssl-dir=/usr/include/openssl \
         --with-curl \
+        --with-config-file-path=$HOME/etc \
      && make \
      && make install
+
+# ------------------------- 配置环境
+RUN set -ex \
+    && cp $HOME/php-src/php.ini-development $HOME/etc/php.ini
+    && echo 'export PATH=/usr/local/php/bin:/usr/local/php/sbin:$PATH' > ~/.bashrc \
+    && source ~/.bashrc
 
 # ------------------------- 设置时区
 RUN apk add --no-cache -U tzdata \

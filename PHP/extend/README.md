@@ -105,10 +105,6 @@ const zend_function_entry say_functions[] = {
  /* }}} */
 
 ```
-5. 切换至php-src目录
-```
-$ cd php-src
-```
 
 5. 编译安装
 编译扩展的步骤如下：
