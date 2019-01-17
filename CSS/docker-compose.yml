@@ -12,11 +12,11 @@ services:
     volumes:
       - ./:/root
     ports:
-      - "80:1024"
+      - "80:10024"
     privileged: true
     networks:
       env_network:
-        ipv4_address: 172.16.238.1
+        ipv4_address: 172.16.238.10
     ulimits:
       nproc: 65535
     hostname: css_notes
@@ -27,5 +27,5 @@ networks:
     ipam:
       driver: default
       config:
-        - subnet: 172.16.236.0/24
-          gateway: 172.16.236.1
+        - subnet: 172.16.238.0/24
+          gateway: 172.16.238.1
