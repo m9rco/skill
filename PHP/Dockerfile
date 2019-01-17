@@ -3,7 +3,7 @@ MAINTAINER pushaowei <pushaowei0727@gmail.com>
 ENV TIME_ZONE PRC
 
 # ------------------------- 工作目录
-WORKDIR /root
+WORKDIR /app
 
 # ------------------------- 镜像源转到中国科技大学
 RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.ustc.edu.cn/g' /etc/apk/repositories \
@@ -42,7 +42,7 @@ RUN set -ex \
      && cd php-src \
      && ./buildconf --force \
      && ./configure \
-        --prefix=$HOME/php \
+        --prefix=/usr/local/php \
         --disable-fileinfo \
         --enable-mysqlnd \
         --enable-sockets \

@@ -1,6 +1,7 @@
 cmake-build-debug/
 .ash_history
 
+.viminfo
 .idea/
 
 # Cmake
