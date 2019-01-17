@@ -2,20 +2,10 @@
 
 从0至1开发PHP扩展学习笔记
 
-   * [实现一个hello]('实现一个hello')
+   * [实现一个hello](./实现一个hello.md)
    * [传参与返回值](#传参与返回值)
-   * [Installation](#installation)
-   * [Usage](#usage)
-      * [STDIN](#stdin)
-      * [Local files](#local-files)
-      * [Remote files](#remote-files)
-      * [Multiple files](#multiple-files)
-      * [Combo](#combo)
-      * [Auto insert and update TOC](#auto-insert-and-update-toc)
-      * [Github token](#github-token)
-   * [Tests](#tests)
-   * [Dependency](#dependency)
-
+   * [类型处理](#类型处理)
+   * [创建变量](#创建变量)
 
 ## 传参与返回值
 
@@ -225,3 +215,98 @@ typedef struct _zend_array HashTable;
 `strpprintf`是PHP为我们提供的字符串拼接的方法。第一个参数是最大字符数。
 
 
+## 创建变量
+
+
+三行我们将用PHP扩展实现
+
+```php
+<?php
+class demo {}
+
+$lng = 2;
+$str = "abc";
+$arr = array(1,'a' => 'b');
+$obj = new demo();
+
+var_dump($str);
+var_dump($arr);
+var_dump($obj);
+?>
+```
+
+### C 代码实现
+
+注意，下面的内容，我们把PHP扩展中的zval结构成为变量，把PHP代码中的变量成为本地变量。
+创建本地变量主要分两步，创建变量和设置为本地变量。
+
+```c
+PHP_FUNCTION(define_var)
+{
+    zval var_value; //变量的值
+    zend_string *var_name = NULL; //变量名称
+
+      //创建整型变量
+    ZVAL_LONG(&var_value, 2);
+    zend_set_local_var_str("lng", 3 , &var_value, 0); //设置本地变量
+    ZVAL_NULL(&var_value);
+
+    //创建字符串变量
+    zend_string *str = NULL;
+    char content[4] = "abc";
+    var_name = zend_string_init("str", 3, 0); //设置变量名称
+    str = zend_string_init(content, sizeof(content) - 1, 0);
+    ZVAL_STR(&var_value, str); //设置变量的值
+    zend_set_local_var(var_name, &var_value, 0); //设置本地变量
+    zend_string_release(var_name);
+    ZVAL_NULL(&var_value);
+
+    //创建数组变量
+    var_name = zend_string_init("arr", 3, 0); //设置变量名称
+    array_init(&var_value);
+    add_index_long(&var_value, 0, 1);
+    add_assoc_stringl_ex(&var_value, "a", 1, "b", 1);
+    zend_set_local_var(var_name, &var_value, 0); //设置本地变量
+    zend_string_release(var_name);
+    ZVAL_NULL(&var_value);
+
+    //创建对象变量
+    zend_class_entry *ce;
+    zend_string *class_name;
+    class_name = zend_string_init("demo", 4, 0);
+    ce = zend_fetch_class(class_name, ZEND_FETCH_CLASS_AUTO); //获取类
+    zend_string_release(class_name);
+    object_init_ex(&var_value, ce);
+    zend_set_local_var_str("obj", 3, &var_value, 0); //设置本地变量
+    ZVAL_NULL(&var_value);
+}
+```
+
+
+### 创建变量
+
+变量的类型有多种，在创建变量的方式也有所不同。
+对于简单的数据类型，创建变量很简单。只需调用相应的宏方法就可以。
+这些方法在Zend/zend_types.h文件中，宏方法以ZVAL_开头。如：
+
+键|说明
+---|---
+ZVAL_NULL|	设置为null
+ZVAL_FALSE|	设置为false。
+ZVAL_TRUE|	设置为true
+ZVAL_BOOL|	设置bool。
+ZVAL_LONG|	设置long。
+ZVAL_DOUBLE|设置为double。
+
+使用方法，可以参考上面代码中ZVAL_LONG的调用。
+对于数组，对象，字符串等复杂数据类型。比较麻烦。可以参考上面的示例代码。
+
+### 设置本地变量
+
+设置本地变量Zend引擎为我们提供了两个方法。两个函数的使用，都在以上的代码中做了演示。这两个方法的应用场景有所差别。
+
+** zend_set_local_var **
+如果已经存在类型为zend_string的变量名，则使用这个方法创建本地变量
+
+** zend_set_local_var_str **
+如果没有类型为zend_string的变量名，使用此方法创建本地变量
