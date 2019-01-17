@@ -1,126 +1,227 @@
 # php 扩展开发笔记
 
-## 环境准备
+从0至1开发PHP扩展学习笔记
 
-###  实现一个hello world
+   * [实现一个hello]('实现一个hello')
+   * [传参与返回值](#传参与返回值)
+   * [Installation](#installation)
+   * [Usage](#usage)
+      * [STDIN](#stdin)
+      * [Local files](#local-files)
+      * [Remote files](#remote-files)
+      * [Multiple files](#multiple-files)
+      * [Combo](#combo)
+      * [Auto insert and update TOC](#auto-insert-and-update-toc)
+      * [Github token](#github-token)
+   * [Tests](#tests)
+   * [Dependency](#dependency)
 
-1. 克隆 php 官方源码
 
-```bash
-git clone  --depth=1 --branch PHP-7.0.19 https://github.com/php/php-src.git
+## 传参与返回值
+
+```php
+<?php
+    function default_value ($type, $value = null) {
+        if ($type == "int") {
+            return $value ?? 0;
+        } else if ($type == "bool") {
+            return $value ?? false;
+        } else if ($type == "str") {
+            return is_null($value) ? "" : $value;
+        }
+        return null;
+    }
+ 
+    var_dump(default_value("int"));
+    var_dump(default_value("int", 1));
+    var_dump(default_value("bool"));
+    var_dump(default_value("bool", true));
+    var_dump(default_value("str"));
+    var_dump(default_value("str", "a"));
+    var_dump(default_value("array"));
+?>
 ```
 
-2. 生成代码
-PHP为我们提供了生成基本代码的工具 ext_skel。这个工具在PHP源代码的./ext目录下。
+### C 代码实现
 
-```
-$ cd php_src/ext/
-$ ./ext_skel --extname=say
-```
-extname参数的值就是扩展名称。执行ext_skel命令后，这样在当前目录下会生成一个与扩展名一样的目录。
-
-```
-Creating directory say
-Creating basic files: config.m4 config.w32 .gitignore say.c php_say.h CREDITS EXPERIMENTAL tests/001.phpt say.php [done].
-
-To use your new extension, you will have to execute the following steps:
-
-1.  $ cd ..
-2.  $ vi ext/say/config.m4
-3.  $ ./buildconf
-4.  $ ./configure --[with|enable]-say
-5.  $ make
-6.  $ ./sapi/cli/php -f ext/say/say.php
-7.  $ vi ext/say/say.c
-8.  $ make
-
-Repeat steps 3-6 until you are satisfied with ext/say/config.m4 and
-step 6 confirms that your module is compiled into PHP. Then, start writing
-code and repeat the last two steps as often as necessary.
-```
-
-3. 修改config.m4配置文件
-config.m4的作用就是配合phpize工具生成configure文件。configure文件是用于环境检测的。检测扩展编译运行所需的环境是否满足。现在我们开始修改config.m4文件。
-
-```
-$ cd ./say
-$ vim ./config.m4
-```
-
-打开，config.m4文件后，你会发现这样一段文字。
-
-```
-dnl If your extension references something external, use with:
-
-dnl PHP_ARG_WITH(say, for say support,
-dnl Make sure that the comment is aligned:
-dnl [  --with-say             Include say support])
-
-dnl Otherwise use enable:
-
-dnl PHP_ARG_ENABLE(say, whether to enable say support,
-dnl Make sure that the comment is aligned:
-dnl [  --enable-say           Enable say support])
-```
-
-其中，dnl 是注释符号。上面的代码说，如果你所编写的扩展如果依赖其它的扩展或者lib库，需要去掉PHP_ARG_WITH相关代码的注释。否则，去掉 PHP_ARG_ENABLE 相关代码段的注释。我们编写的扩展不需要依赖其他的扩展和lib库。因此，我们去掉PHP_ARG_ENABLE前面的注释。去掉注释后的代码如下：
-
-```
-dnl If your extension references something external, use with:
-
- dnl PHP_ARG_WITH(say, for say support,
- dnl Make sure that the comment is aligned:
- dnl [  --with-say             Include say support])
-
- dnl Otherwise use enable:
-
- PHP_ARG_ENABLE(say, whether to enable say support,
- Make sure that the comment is aligned:
- [  --enable-say           Enable say support])
-```
-
-4. 代码实现
-修改say.c文件。实现say方法。
-找到PHP_FUNCTION(confirm_say_compiled)，在其上面增加如下代码：
-
-```
-PHP_FUNCTION(say)
+```C
+PHP_FUNCTION(default_value)
 {
-        zend_string *strg;
-        strg = strpprintf(0, "hello word");
-        RETURN_STR(strg);
+    zend_string     *type;    
+    zval            *value = NULL;
+ 
+#ifndef FAST_ZPP
+    /* Get function parameters and do error-checking. */
+    if (zend_parse_parameters(ZEND_NUM_ARGS(), "S|z", &type, &value) == FAILURE) {
+        return;
+    }    
+#else
+    ZEND_PARSE_PARAMETERS_START(1, 2)
+        Z_PARAM_STR(type)
+        Z_PARAM_OPTIONAL
+        Z_PARAM_ZVAL_EX(value, 0, 1)
+    ZEND_PARSE_PARAMETERS_END();
+#endif
+     
+    if (ZSTR_LEN(type) == 3 && strncmp(ZSTR_VAL(type), "int", 3) == 0 && value == NULL) {
+        RETURN_LONG(0);
+    } else if (ZSTR_LEN(type) == 3 && strncmp(ZSTR_VAL(type), "int", 3) == 0 && value != NULL) {
+        RETURN_ZVAL(value, 0, 1); 
+    } else if (ZSTR_LEN(type) == 4 && strncmp(ZSTR_VAL(type), "bool", 4) == 0 && value == NULL) {
+        RETURN_FALSE;
+    } else if (ZSTR_LEN(type) == 4 && strncmp(ZSTR_VAL(type), "bool", 4) == 0 && value != NULL) {
+        RETURN_ZVAL(value, 0, 1); 
+    } else if (ZSTR_LEN(type) == 3 && strncmp(ZSTR_VAL(type), "str", 3) == 0 && value == NULL) {
+        RETURN_EMPTY_STRING();
+    } else if (ZSTR_LEN(type) == 3 && strncmp(ZSTR_VAL(type), "str", 3) == 0 && value != NULL) {
+        RETURN_ZVAL(value, 0, 1); 
+    } 
+    RETURN_NULL();
 }
 ```
-找到 PHP_FE(confirm_say_compiled, 在上面增加如下代码：
 
+### 代码说明
+
+#### 获取参数
+
+在PHP7中提供了两种获取参数的方法。`zend_parse_parameters`和`FAST_ZPP`方式。
+
+###### zend_parse_parameters
+
+在PHP7之前一直使用`zend_parse_parameters`函数获取参数。这个函数的作用，就是把传入的参数转换为PHP内核中相应的类型，方便在PHP扩展中使用。
+
+参数说明：
+- 第一个参数，参数个数。一般就使用`ZEND_NUM_ARGS()`，不需要改变。
+- 第二个参数，格式化字符串。这个格式化字符串的作用就是，指定传入参数与PHP内核类型的转换关系。
+
+代码中 `S|z` 的含义就是：
+- S 表示参数是一个字符串。要把传入的参数转换为zend_string类型。
+- | 表示之后的参数是可选。可以传，也可以不传。
+- z 表示参数是多种类型。要把传入的参数转换为zval类型。
+
+除此之外，还有一些specifier，需要注意：
+- ！如果接收了一个PHP语言里的null变量，则直接把其转成C语言里的NULL，而不是封装成IS_NULL类型的zval。
+- / 如果传递过来的变量与别的变量共用一个zval，而且不是引用，则进行强制分离，新的zval的is_ref__gc==0, and refcount__gc==1.
+
+更多格式化字符串的含义可以查看官方网站。https://wiki.php.net/rfc/fast_zpp
+
+###### FAST_ZPP
+
+在PHP7中新提供的方式。是为了提高参数解析的性能。对应经常使用的方法，建议使用FAST_ZPP方式。
+
+使用方式：
+
+以 `ZEND_PARSE_PARAMETERS_START(1, 2)` 开头。
+
+第一个参数表示必传的参数个数，第二个参数表示最多传入的参数个数。
+以`ZEND_PARSE_PARAMETERS_END();`结束。
+中间是传入参数的解析。
+值得注意的是，一般`FAST_ZPP`的宏方法与`zend_parse_parameters`的`specifier`是一一对应的。如：
+- Z_PARAM_OPTIONAL 对应 |
+- Z_PARAM_STR	   对应 S
+
+但是，`Z_PARAM_ZVAL_EX`方法比较特殊。它对应两个`specifier`，分别是 ! 和 / 。! 对应宏方法的第二个参数。/ 对应宏方法的第三个参数。如果想开启，只要设置为1即可。
+FAST_ZPP 相应的宏方法可以查看官方网站 https://wiki.php.net/rfc/fast_zpp#proposal
+
+###### 返回值
+
+方法的返回值是使用`RETURN_`开头的宏方法进行返回的。常用的宏方法有：
+
+- RETURN_NULL()	返回null
+- RETURN_LONG(l)	返回整型
+- RETURN_DOUBLE(d) 返回浮点型
+- RETURN_STR(s)	返回一个字符串。参数是一个zend_string * 指针
+- RETURN_STRING(s)	返回一个字符串。参数是一个char * 指针
+- RETURN_STRINGL(s, l) 返回一个字符串。第二个参数是字符串长度。
+- RETURN_EMPTY_STRING()	返回一个空字符串。
+- RETURN_ARR(r)	返回一个数组。参数是zend_array *指针。
+- RETURN_OBJ(r) 返回一个对象。参数是zend_object *指针。
+- RETURN_ZVAL(zv, copy, dtor) 返回任意类型。参数是 zval *指针。
+- RETURN_FALSE	返回false
+- RETURN_TRUE	返回true
+
+## 类型处理
+
+分别获取string 和 array的长度
+
+```php
+<?php
+   function get_size ($value) {
+        if (is_string($value)) {
+            return "string size is ". strlen($value);
+        } else if (is_array($value)) {
+            return "array size is ". sizeof($value);
+        } else {
+              return "can not support";
+        }
+    }
+
+    var_dump(get_size("abc"));
+    var_dump(get_size(array(1,2)));
+?>
 ```
-PHP_FE(say, NULL)
 
+### C 代码实现
+
+`zval`变量相关的宏方法大部分定义在`Zend/zend_types.h`文件中。
+
+
+```C
+PHP_FUNCTION(get_size)
+{
+    zval *val;
+    size_t size;
+    zend_string *result;
+    HashTable *myht;
+
+    if (zend_parse_parameters(ZEND_NUM_ARGS(), "z", &val) == FAILURE) {
+        return;
+    }
+
+    if (Z_TYPE_P(val) == IS_STRING) {
+        result = strpprintf(0, "string size is %d", Z_STRLEN_P(val));
+    } else if (Z_TYPE_P(val) == IS_ARRAY) {
+        myht = Z_ARRVAL_P(val);
+        result = strpprintf(0, "array size is %d", zend_array_count(myht));
+    } else {
+        result = strpprintf(0, "can not support");
+    }
+
+    RETURN_STR(result);
+}
 ```
-const zend_function_entry say_functions[] = {
-     PHP_FE(say, NULL)       /* For testing, remove later. */
-     PHP_FE(confirm_say_compiled,    NULL)       /* For testing, remove later. */
-     PHP_FE_END  /* Must be the last line in say_functions[] */
- };
- /* }}} */
 
+### 类型相关宏方法
+
+Z_TYPE_P(zval *) 获取zval变量的类型。常见的类型都有：
+
+```c
+#define IS_UNDEF                    0
+#define IS_NULL                     1
+#define IS_FALSE                    2
+#define IS_TRUE                     3
+#define IS_LONG                     4
+#define IS_DOUBLE                   5
+#define IS_STRING                   6
+#define IS_ARRAY                    7
+#define IS_OBJECT                   8
+#define IS_RESOURCE                 9
+#define IS_REFERENCE                10
 ```
 
-5. 编译安装
-编译扩展的步骤如下：
+`Z_STRLEN_P(zval *)`获取字符串的长度。
 
-```bash
-$ phpize
-$ ./configure
-$ make && make install
-```
-修改php.ini文件，增加如下代码：
+###  数组
+在 `Zend/zend_hash.c`文件中包含一些array处理的方法。
 
-```bash
-[say]
-extension = say.so
-然后执行，php -m 命令。在输出的内容中，你会看到say字样。
+`zend_array_count(HashTable *)` 获取数组的元素个数。
+`zend_array` 和 `HashTable`其实是相同的数据结构。在`Zend/zend_types.h`文件中有定义。
+
+```c
+typedef struct _zend_array HashTable;
 ```
 
-## 参考资料
-- [hello world](https://www.bo56.com/php7%E6%89%A9%E5%B1%95%E5%BC%80%E5%8F%91%E4%B9%8Bhello-word/)
+### 字符串拼接
+`strpprintf`是PHP为我们提供的字符串拼接的方法。第一个参数是最大字符数。
+
+
