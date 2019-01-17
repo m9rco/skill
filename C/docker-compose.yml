@@ -2,6 +2,10 @@ version: '2.0'
 services:
   c_notes:
     image: "c_dev"
+    labels:
+      com.startupteam.description: "C development"
+      com.startupteam.department: "C development"
+      com.startupteam.release: "gcc for v3.0"
     build:
       context: .
       dockerfile: Dockerfile

@@ -2,7 +2,7 @@ FROM alpine:3.7
 MAINTAINER pushaowei <pushaowei0727@gmail.com>
 ENV TIME_ZONE PRC
 
-# ------------------------- 工作目录机端口
+# ------------------------- 工作目录
 WORKDIR /root
 
 # ------------------------- 镜像源转到中国科技大学

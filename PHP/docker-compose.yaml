@@ -16,4 +16,3 @@ services:
       nofile:
         soft: 20000
         hard: 40000
-    tty: true

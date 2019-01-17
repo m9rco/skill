@@ -2,6 +2,10 @@ version: '2.0'
 services:
   css_notes:
     image: "node_dev"
+    labels:
+      com.startupteam.description: "node development"
+      com.startupteam.department: "node development"
+      com.startupteam.release: "node for v8.0"
     build:
       context: .
       dockerfile: Dockerfile
@@ -23,5 +27,5 @@ networks:
     ipam:
       driver: default
       config:
-        - subnet: 172.16.238.0/24
-          gateway: 172.16.238.1
+        - subnet: 172.16.236.0/24
+          gateway: 172.16.236.1
