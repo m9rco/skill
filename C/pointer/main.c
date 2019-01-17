@@ -5,9 +5,6 @@ int main() {
     int bar = 10;
     int *foo_pointer;
 
-    /**
-     * 输出每个变量的地址
-     */
     printf("&foo %p\n", &foo);
     printf("&bar %p\n", &bar);
     printf("&foo_pointer %p\n", &foo_pointer);
