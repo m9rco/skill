@@ -12,8 +12,8 @@ services:
     volumes:
       - ./:/root
     ports:
-      - "80:10024"
-    privileged: true
+      - "80:10080"
+      - "3000:13000"
     networks:
       env_network:
         ipv4_address: 172.16.238.10
@@ -29,3 +29,5 @@ networks:
       config:
         - subnet: 172.16.238.0/24
           gateway: 172.16.238.1
+
+# docker-compose run --name css_learn  css_notes sh
