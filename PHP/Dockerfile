@@ -42,17 +42,15 @@ RUN set -ex \
      && cd php-src \
      && ./buildconf --force \
      && ./configure \
-        --enable-mysqlnd \
         --prefix=$HOME/php \
-        --exec-prefix=$HOME/local \
-        --bindir=$HOME/bin \
-        --sbindir=$HOME/sbin \
-        --includedir=$HOME/include \
-        --libdir=$HOME/lib \
-        --mandir=$HOME/man \
+        --disable-fileinfo \
+        --enable-mysqlnd \
+        --enable-sockets \
+        --enable-fpm \
+        --enable-session \
+        --enable-opcache \
         --with-mysqli=mysqlnd \
         --with-pdo-mysql=mysqlnd \
-        --with-config-file-path=$HOME/etc \
         --with-mhash \
         --with-openssl \
         --with-openssl-dir=/usr/include/openssl \
@@ -72,4 +70,3 @@ RUN rm -rf /var/cache/apk/* \
 
 # ------------------------- 启动容器
 CMD ["sh"]
-

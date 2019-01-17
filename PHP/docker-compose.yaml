@@ -1,10 +1,19 @@
 version: '2.0'
 services:
   php_ext:
-    image: "php_dev"
+    image: "php_ext_dev"
+    labels:
+      com.startupteam.description: "PHP extension development"
+      com.startupteam.department: "PHP extension development"
+      com.startupteam.release: "PHP7.0.19 for v1.0"
     build:
       context: .
       dockerfile: Dockerfile
     volumes:
       - ./:/root
-      - ./source:/php
+    ulimits:
+      nproc: 65535
+      nofile:
+        soft: 20000
+        hard: 40000
+    tty: true
