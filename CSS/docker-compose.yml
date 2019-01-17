@@ -1,0 +1,27 @@
+version: '2.0'
+services:
+  css_notes:
+    image: "node_dev"
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./:/root
+    ports:
+      - "80:1024"
+    privileged: true
+    networks:
+      env_network:
+        ipv4_address: 172.16.238.1
+    ulimits:
+      nproc: 65535
+    hostname: css_notes
+    mem_limit: 1024m
+networks:
+  env_network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.16.238.0/24
+          gateway: 172.16.238.1
