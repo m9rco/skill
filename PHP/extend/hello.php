@@ -39,3 +39,19 @@ echo PHP_EOL;
 */
 var_dump(get_size("abc"));
 var_dump(get_size(array(1,2)));
+
+
+/*
+    $lng = 2;
+    $str = "abc";
+    $arr = array(1,'a' => 'b');
+
+    var_dump($str);
+    var_dump($arr);
+    var_dump($obj);
+*/
+class demo {}
+define_var();
+
+var_dump($str);
+var_dump($arr);
