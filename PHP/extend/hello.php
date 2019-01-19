@@ -144,5 +144,6 @@ var_dump(array_concat($arr, $prefix));
     var_dump($factory->product);
 */
 
+    $factory = new factory();
     var_dump($factory->product);
     var_dump($factory->product);
