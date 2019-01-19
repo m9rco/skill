@@ -55,3 +55,83 @@ define_var();
 
 var_dump($str);
 var_dump($arr);
+
+
+/*
+<?php
+function str_concat($prefix, $string) {
+    $len = strlen($prefix);
+    $substr = substr($string, 0, $len);
+    if ($substr != $prefix) {
+        return $prefix." ".$string;
+    } else {
+        return $string;
+    }
+}
+
+echo str_concat("hello", "m9rco");
+echo PHP_EOL;
+echo str_concat("hello", "hello m9rco");
+echo PHP_EOL;
+*/
+
+echo str_concat("hello", "m9rco");
+echo PHP_EOL;
+echo str_concat("hello", "hello m9rco");
+echo PHP_EOL;
+
+
+
+
+/*
+<?php
+function array_concat ($arr, $prefix) {
+    foreach($arr as $key => $val) {
+        if (isset($prefix[$key])
+                && is_string($val)
+                && is_string($prefix[$key])) {
+            $arr[$key] = $prefix[$key].$val;
+        }
+    }
+    return $arr;
+}
+
+$arr = array(
+    0 => '0',
+    1 => '123',
+    'a' => 'abc',
+);
+$prefix = array(
+    1 => '456',
+    'a' => 'def',
+);
+var_dump(array_concat($arr, $prefix));
+?>
+*/
+
+$arr = array(
+    0 => '0',
+    1 => '123',
+    'a' => 'abc',
+);
+$prefix = array(
+    1 => '456',
+    'a' => 'def',
+);
+var_dump(array_concat($arr, $prefix));
+
+
+/*
+	<?php
+    	define("__ARR__", array('2', 'site'=>"m9rco.cn"));
+		define("__SITE__", "m9rco.cn", true);
+		define("say\__SITE__", "m9rco.cn");
+    	var_dump(__ARR__);
+		var_dump(__site__);
+		var_dump(say\__SITE__);
+	?>
+
+*/
+    	var_dump(__ARR__);
+		var_dump(__site__);
+		var_dump(say\__SITE__);

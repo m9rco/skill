@@ -388,6 +388,8 @@ struct _zend_string {
 [Zend/zend_string.h](https://github.com/php/php-src/blob/PHP-7.0.19/Zend/zend_string.h#L21)提供了一些zend_string处理的一些方法。
 `ZSTR_`开头的宏方法是zend_string结构专属的方法。主要有如下几个：
 
+https://github.com/php/php-src/blob/42b8d368f83c6484f8ae8c80a9bb56cf4f46d3e2/Zend/zend_string.h#L40
+
 ```
 #define ZSTR_VAL(zstr)  (zstr)->val
 #define ZSTR_LEN(zstr)  (zstr)->len
@@ -395,4 +397,291 @@ struct _zend_string {
 #define ZSTR_HASH(zstr) zend_string_hash_val(zstr)
 ```
 
-https://github.com/php/php-src/blob/42b8d368f83c6484f8ae8c80a9bb56cf4f46d3e2/Zend/zend_string.h#L40
+`ZSTR_VAL` `ZSTR_LEN ZSTR_H`宏方法分别对应`zend_string`结构的成员。`ZSTR_HASH`是获取字符串的hash值，如果不存在，就调用hash函数生成一个。
+
+代码中故意把第二个参数转换成zval。主要是为了展现zend为我们提供了一系列的操作方法。如，`zval_get_string`,`zend_binary_strncmp`。
+这些方法在`Zend/zend_operators.h`文件中。
+
+更多宏方法请查看 Zend/zend_API.h中的相关代码。
+
+## 数组处理
+
+### PHP 代码实现
+
+把两个数组，相同key的字符串值拼接。
+
+```
+<?php
+function array_concat ($arr, $prefix) {
+    foreach($arr as $key => $val) {
+        if (isset($prefix[$key])
+                && is_string($val)
+                && is_string($prefix[$key])) {
+            $arr[$key] = $prefix[$key].$val;
+        }
+    }
+    return $arr;
+}
+
+$arr = array(
+    0 => '0',
+    1 => '123',
+    'a' => 'abc',
+);
+$prefix = array(
+    1 => '456',
+    'a' => 'def',
+);
+var_dump(array_concat($arr, $prefix));
+?>
+```
+
+### C 代码实现
+
+```
+PHP_FUNCTION(array_concat)
+{
+    zval *arr, *prefix, *entry, *prefix_entry, value;
+    zend_string *string_key, *result;
+    zend_ulong num_key;
+
+    if (zend_parse_parameters(ZEND_NUM_ARGS(), "aa", &arr, &prefix) == FAILURE) {
+        return;
+    }
+
+    array_init_size(return_value, zend_hash_num_elements(Z_ARRVAL_P(arr)));
+
+    ZEND_HASH_FOREACH_KEY_VAL(Z_ARRVAL_P(arr), num_key, string_key, entry) {
+        if (string_key && zend_hash_exists(Z_ARRVAL_P(prefix), string_key)) {
+            prefix_entry = zend_hash_find(Z_ARRVAL_P(prefix), string_key);
+            if (Z_TYPE_P(entry) == IS_STRING && prefix_entry != NULL && Z_TYPE_P(prefix_entry) == IS_STRING) {
+                result = strpprintf(0, "%s%s", Z_STRVAL_P(prefix_entry), Z_STRVAL_P(entry));
+                ZVAL_STR(&value, result);
+                zend_hash_update(Z_ARRVAL_P(return_value), string_key, &value);
+            }
+        } else if (string_key == NULL && zend_hash_index_exists(Z_ARRVAL_P(prefix), num_key)){
+            prefix_entry = zend_hash_index_find(Z_ARRVAL_P(prefix), num_key);
+            if (Z_TYPE_P(entry) == IS_STRING && prefix_entry != NULL && Z_TYPE_P(prefix_entry) == IS_STRING) {
+                result = strpprintf(0, "%s%s", Z_STRVAL_P(prefix_entry), Z_STRVAL_P(entry));
+                ZVAL_STR(&value, result);
+                zend_hash_index_update(Z_ARRVAL_P(return_value), num_key, &value);
+            }
+        } else if (string_key) {
+            zend_hash_update(Z_ARRVAL_P(return_value), string_key, entry);
+            zval_add_ref(entry);
+        } else  {
+            zend_hash_index_update(Z_ARRVAL_P(return_value), num_key, entry);
+            zval_add_ref(entry);
+        }
+    }ZEND_HASH_FOREACH_END();
+```
+
+### 结构分析
+
+PHP中的数组本质上就是一个哈希。
+对于哈希处理的方法主要集中在[Zend/zend_hash.h](https://github.com/php/php-src/blob/PHP-7.0.19/Zend/zend_hash.h)中。
+对于数组的操作方法主要集中在[Zend/zend_API.h](https://github.com/php/php-src/blob/PHP-7.0.19/Zend/zend_API.h)。数组的方法其实就是对哈希处理方法的一层包装。
+数组操作的方法主要是以`add_assoc_*` 和 `add_index_*`开头的一些列方法。
+
+下面是代码中涉及的一些方法。
+`zend_hash_num_elements`获取数组的元素个数。
+`array_init_size(return_value, zend_hash_num_elements(Z_ARRVAL_P(arr)));` 初始化一个数组。
+在PHP扩展中，我们是通过return_value这个变量设置方法的返回值。因此，我们直接修改这个`return_value`变量即可。感兴趣的话，可以把宏方法`PHP_FUNCTION`展开看下。
+PHP7提供了一套宏方法用于遍历哈希和对哈希进行操作。这些宏方法主要放在Zend/zend_hash.h](https://github.com/php/php-src/blob/PHP-7.0.19/Zend/zend_hash.h)文件中。
+如，代码中的`ZEND_HASH_FOREACH_KEY_VAL`就是一个变量哈希的宏。是不是和PHP代码中的foreach有点像？
+
+在这里我们把代码中用到的哈希相关的方法做下整理说明：
+
+关键词|用法
+---|---
+ZEND_HASH_FOREACH_KEY_VAL 和 ZEND_HASH_FOREACH_END 配合使用 |实现foreach的效果。
+zend_hash_exists| 检测指定的key在哈希中是否存在。key为字符串。
+zend_hash_index_exists| 检测指定的key在哈希中是否存在。key为数字。
+zend_hash_find|	根据key查找指定的值。key为字符串。
+zend_hash_index_find| 根据key查找指定的值。key为数字。
+zend_hash_update |更新指定key的值。key为字符串。
+zend_hash_index_update| 更新指定key的值。key为数字。
+
+基本上有这些方法，你就可以对数组进行一些基本操作了。方法命名也很有规律，`key`为字符串和数字提供了两套。
+
+`zval_add_ref(entry); `给数组的值，增加一次引用计数
+`zend_hash_update`方法只自动给string_key自动增加了一次引用计数。
+数组`return_value`共用数组arr的值。
+因此，我们需要手动增加一次引用计数。
+
+
+## 常量定义
+
+### PHP 代码实现
+
+```php
+	<?php
+    	define("__ARR__", array('2', 'site'=>"m9rco.cn"));
+		define("__SITE__", "m9rco.cn", true);
+		define("say\__SITE__", "m9rco.cn");
+    	var_dump(__ARR__);
+		var_dump(__site__);
+		var_dump(say\__SITE__);
+	?>
+```
+
+## C 代码实现
+
+```C
+//增加两个方法
+//释放hash
+static void say_hash_destroy(HashTable *ht)
+    zend_string *key;
+    zval *element;
+    if (((ht)->u.flags & HASH_FLAG_INITIALIZED)) {
+        ZEND_HASH_FOREACH_STR_KEY_VAL(ht, key, element) {
+            if (key) {
+                free(key);
+            }
+            switch (Z_TYPE_P(element)) {
+                case IS_STRING:
+                    free(Z_PTR_P(element));
+                    break;
+                case IS_ARRAY:
+                    say_hash_destroy(Z_ARRVAL_P(element));
+                    break;
+            }
+        } ZEND_HASH_FOREACH_END();
+        free(HT_GET_DATA_ADDR(ht));
+    }
+    free(ht);
+}
+//释放数组和字符串
+static void say_entry_dtor_persistent(zval *zvalue)
+    if (Z_TYPE_P(zvalue) == IS_ARRAY) {
+        say_hash_destroy(Z_ARRVAL_P(zvalue));
+    } else if (Z_TYPE_P(zvalue) == IS_STRING) {
+        zend_string_release(Z_STR_P(zvalue));
+    }
+}
+//PHP_MINIT_FUNCTION(demo) 方法的PHP扩展源码： 扩展初始化的调用此方法
+PHP_MINIT_FUNCTION(demo)
+        {
+                zend_constant c;
+                zend_string *key;
+                zval value;
+                ZVAL_NEW_PERSISTENT_ARR(&c.value);
+                zend_hash_init(Z_ARRVAL(c.value), 0, NULL,
+        (dtor_func_t)say_entry_dtor_persistent, 1);
+                add_index_long(&c.value, 0, 2);
+                key = zend_string_init("site", 4, 1);
+                ZVAL_STR(&value, zend_string_init("m9rco.cn", 12, 1));
+                zend_hash_update(Z_ARRVAL(c.value), key, &value);
+                c.flags = CONST_CS|CONST_PERSISTENT;
+                c.name = zend_string_init("__ARR__", 7, 1);
+                c.module_number = module_number;
+                zend_register_constant(&c);
+
+                REGISTER_STRINGL_CONSTANT("__SITE__", "m9rco.cn", 12, CONST_PERSISTENT);
+                REGISTER_NS_STRINGL_CONSTANT("say", "__SITE__", "m9rco.cn", 8, CONST_CS|CONST_PERSISTENT);
+
+                return SUCCESS;
+        }
+//扩展卸载的时候调用此方法
+PHP_MSHUTDOWN_FUNCTION(demo)
+        {
+                zval *val;
+                val = zend_get_constant_str("__ARR__", 7);
+                say_hash_destroy(Z_ARRVAL_P(val));
+                ZVAL_NULL(val);
+
+                /* uncomment this line if you have INI entries
+                UNREGISTER_INI_ENTRIES();
+                */
+                return SUCCESS;
+        }
+```
+
+## 结构分析
+
+一般情况下，在扩展中只建议定义`null`，`bool`，`long`，`double`，`string`几种类型的常量。因为内核只提供了这几种类型的宏方法。
+常量定义的宏方法在[Zend/zend_constants.h](https://github.com/php/php-src/blob/PHP-7.0.19/Zend/zend_constants.h)文件中。想定义一个常量，很简单，只要调用对应的宏方法即可。如：
+```
+ REGISTER_STRINGL_CONSTANT("__SITE__", "m9rco.cn", 12, CONST_PERSISTENT);
+```
+宏方法的最后一个参数是一些标识符。
+
+常量|说明
+---|---
+CONST_PERSISTENT| 表示为持久的。常驻内存。
+CONST_CS	| 表示为区分大小写。
+
+注意我们上面定义常量时使用的是__SITE__，但是调用的时候使用的是__site__。
+
+还有一套可以指定命名空间的宏方法。宏方法中带NS。如：
+
+```
+REGISTER_NS_STRINGL_CONSTANT("say", "__SITE__", "m9rco.cn", 8, CONST_CS|CONST_PERSISTENT);
+```
+
+第一个参数就是命名空间。
+
+为了展示常量定义的一些细节。我们定义了一个`__ARR__`常量。
+`ZVAL_NEW_PERSISTENT_ARR(&c.value);`我们想让`__ARR__为持久的。所以使用`ZVAL_NEW_PERSISTENT_ARR`创建一个数组。
+数组创建完后，我们需要初始化。初始化的代码就是
+
+```C
+Zend_hash_init(Z_ARRVAL(c.value), 0, NULL,(dtor_func_t)say_entry_dtor_persistent, 1);
+```
+
+参数中的`say_entry_dtor_persistent`是一个析构函数，用于释放数组的元素。
+
+到这里，如果编译运行。当程序执行结束的时候，你会发现一个致命错误。
+
+因为在程序执行完毕，内部zval释放的时候，会进行类型检测。如果发现是array object或者resources，则会报错。可以查看[Zend/zend_variables.c](https://github.com/php/php-src/blob/PHP-7.0.19/Zend/zend_variables.h)文件中_zval_internal_dtor方法。
+为了解决这个问题，我们需要手动释放我们创建的__ARR__相关的数组。
+模块卸载时执行的方法，是优先Zend内部zval释放方法之前调用的。因此，我们只要在`PHP_MSHUTDOWN_FUNCTION(demo)`方法中手动释放。不再让Zend去释放就可以解决了。
+
+## 创建对象
+
+### PHP 代码实现
+
+```
+<?php
+$factory = new factory();
+var_dump($factory->product);
+$factory->production("love");
+var_dump($factory->product);
+?>
+
+```
+
+### C 代码实现
+
+```C
+zend_class_entry *demo_ce;
+
+PHP_METHOD(factory, production);
+ZEND_BEGIN_ARG_INFO_EX(arginfo_children_learn, 0, 0, 1)
+ZEND_ARG_INFO(0, words)
+ZEND_END_ARG_INFO()
+
+const zend_function_entry children_methods[] = {
+    PHP_ME(factory, production, arginfo_children_learn, ZEND_ACC_PUBLIC)
+    {NULL, NULL, NULL}
+}
+
+PHP_MINIT_FUNCTION(factory)
+{
+    zend_class_entry ce;
+    INIT_CLASS_ENTRY(ce, "factory", children_methods);
+    children_ce = zend_register_internal_class(&ce);
+    zend_declare_property_null(demo_ce, "product",       sizeof("product") - 1, ZEND_ACC_PUBLIC);
+}
+
+PHP_METHOD(factory, production)
+{
+    char *words;
+    size_t words_len;
+
+    if (zend_parse_method_parameters(ZEND_NUM_ARGS(), getThis(), "s",&words, &words_len) == FAILURE) {
+            return;
+    }
+    zend_update_property_string(children_ce,  getThis(), "product", sizeof("product") - 1, words);
+}
+```
