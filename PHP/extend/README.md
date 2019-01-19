@@ -20,6 +20,9 @@
      * [设置本地变量](#设置本地变量)
 
 ## 传参与返回值
+
+### PHP 代码实现
+
 ```php
 <?php
     function default_value ($type, $value = null) {
@@ -143,7 +146,10 @@ FAST_ZPP 相应的宏方法可以查看官方网站 https://wiki.php.net/rfc/fas
 
 ## 类型处理
 
+### PHP 代码实现
+
 分别获取string 和 array的长度
+
 
 ```php
 <?php
@@ -228,8 +234,8 @@ typedef struct _zend_array HashTable;
 
 ## 创建变量
 
+### PHP 代码实现
 
-三行我们将用PHP扩展实现
 
 ```php
 <?php
@@ -321,3 +327,72 @@ ZVAL_DOUBLE|设置为double。
 
 ** zend_set_local_var_str **
 如果没有类型为zend_string的变量名，使用此方法创建本地变量
+
+## 字符串处理
+
+### PHP 代码实现
+
+```
+<?php
+function str_concat($prefix, $string) {
+    $len = strlen($prefix);
+    $substr = substr($string, 0, $len);
+    if ($substr != $prefix) {
+        return $prefix." ".$string;
+    } else {
+        return $string;
+    }
+}
+
+echo str_concat("hello", "m9rco");
+echo PHP_EOL;
+echo str_concat("hello", "hello m9rco");
+echo PHP_EOL;
+?>
+```
+
+### C 代码实现
+
+```C
+PHP_FUNCTION(str_concat)
+{
+    zend_string *prefix, *subject, *result;
+    zval *string;
+
+    if (zend_parse_parameters(ZEND_NUM_ARGS(), "Sz", &prefix, &string) == FAILURE) {
+       return;
+    }
+
+    subject = zval_get_string(string);
+    if (zend_binary_strncmp(ZSTR_VAL(prefix), ZSTR_LEN(prefix), ZSTR_VAL(subject), ZSTR_LEN(subject), ZSTR_LEN(prefix)) == 0) {
+        RETURN_STR(subject);
+    }
+    result = strpprintf(0, "%s %s", ZSTR_VAL(prefix), ZSTR_VAL(subject));
+    RETURN_STR(result);
+}
+```
+
+### 结构分析
+
+zend_string是PHP7新增的结构。结构如下：
+
+```
+struct _zend_string {
+    zend_refcounted_h gc; /*gc信息*/
+    zend_ulong        h;  /* hash value */
+    size_t            len; /*字符串长度*/
+    char              val[1]; /*字符串起始地址*/
+};
+```
+
+[Zend/zend_string.h](https://github.com/php/php-src/blob/PHP-7.0.19/Zend/zend_string.h#L21)提供了一些zend_string处理的一些方法。
+`ZSTR_`开头的宏方法是zend_string结构专属的方法。主要有如下几个：
+
+```
+#define ZSTR_VAL(zstr)  (zstr)->val
+#define ZSTR_LEN(zstr)  (zstr)->len
+#define ZSTR_H(zstr)    (zstr)->h
+#define ZSTR_HASH(zstr) zend_string_hash_val(zstr)
+```
+
+https://github.com/php/php-src/blob/42b8d368f83c6484f8ae8c80a9bb56cf4f46d3e2/Zend/zend_string.h#L40
