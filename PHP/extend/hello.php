@@ -135,3 +135,14 @@ var_dump(array_concat($arr, $prefix));
     	var_dump(__ARR__);
 		var_dump(__site__);
 		var_dump(say\__SITE__);
+        echo PHP_EOL;
+
+/*
+    $factory = new factory();
+    var_dump($factory->product);
+    $factory->production("love");
+    var_dump($factory->product);
+*/
+
+    var_dump($factory->product);
+    var_dump($factory->product);
