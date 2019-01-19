@@ -800,3 +800,74 @@ PHP_METHOD(factory, production)
     zend_update_property_string(children_ce,  getThis(), "product", sizeof("product") - 1, words);
 }
 ```
+
+## 配置项
+
+### 声明变量
+
+```h
+// 定义一个全局变量类型，代码在`php_demo.h`文件中
+
+ZEND_BEGIN_MODULE_GLOBALS(demo)
+zend_long  global_number;
+char *global_string;
+zend_bool global_boolean;
+ZEND_END_MODULE_GLOBALS(demo)
+
+//声明一个全局变量
+ZEND_DECLARE_MODULE_GLOBALS(demo)
+```
+### 设置配置项
+所有的配置项参数都必须在PHP_INI_BEGIN() 和 PHP_INI_END()之间
+
+```
+PHP_INI_BEGIN()
+    STD_PHP_INI_ENTRY("demo.number", "100", PHP_INI_ALL, OnUpdateLong, global_value, zend_say_globals, say_globals)
+    STD_PHP_INI_ENTRY("demo.string", "ab", PHP_INI_ALL, OnUpdateString, global_string, zend_say_globals, say_globals)
+    STD_PHP_INI_ENTRY("demo.boolean", "0", PHP_INI_ALL, OnUpdateBool, global_string, zend_say_globals, say_globals)
+PHP_INI_END()
+```
+
+### 加载配置项
+
+这一步主要是把配置项从配置文件中读取出来，根据第二步设置的参数，赋值给第一步声明的变量。
+宏方法`REGISTER_INI_ENTRIES();`是用于加载配置文件的。这个宏方法默认是被注释掉，在`PHP_MINIT_FUNCTION`方法中。只要把注释给去掉即可。
+
+```
+PHP_MINIT_FUNCTION(demo)
+{
+    ......
+    REGISTER_INI_ENTRIES();
+}
+```
+
+### 读取配置项
+
+在PHP扩展中读取配置项值，需要使用一个宏方法SAY_G()。这个宏方法定义在php_say.h中。
+现在，我们定义一个方法show_ini()来显示配置项内容。代码如下：
+```
+PHP_FUNCTION(show_ini)
+{
+    zval arr;
+    array_init(&arr);
+    add_assoc_long_ex(&arr, "demo.number", 10, SAY_G(global_number));
+    add_assoc_string_ex(&arr, "demo.string", 10, SAY_G(global_string));
+    add_assoc_bool_ex(&arr, "demo.boolean", 11, SAY_G(global_boolean));
+    RETURN_ZVAL(&arr, 0, 1);
+}
+```
+
+### 销毁配置项
+
+这一步主要是为了在PHP进程结束时，释放配置项占用的资源。
+销毁配置项是通过宏方法`UNREGISTER_INI_ENTRIES()`来实现的。这个方法默认在`PHP_MSHUTDOWN_FUNCTION`方法中。
+默认是被注释掉的。只要把注释去掉就可以了。代码如下：
+
+```
+PHP_MSHUTDOWN_FUNCTION(demo)
+{
+    UNREGISTER_INI_ENTRIES();
+   ......
+}
+```
+
